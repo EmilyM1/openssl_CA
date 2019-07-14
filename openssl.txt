@@ -1,0 +1,56 @@
+
+
+Make a Certificate Authority:
+
+Go to the dir you want this in.
+
+1. Make the root private key
+
+openssl genrsa -out nameofyourca.key 2048
+
+
+2. Make a CSR for the root CRT
+
+openssl req -new -key nameofyourca.key -out namefortheca.csr
+
+
+Go thru and fill out info.
+Entering past the challenge password and optional company name are fine if you don't want to fill this out.
+
+3. You may need a openssl.ext file dependent on what your doing.
+
+ Make a new file called openssl.ext, here is some config:
+
+[root]
+basicConstraints=critical, CA:TRUE
+[server]
+extendedKeyUsage = serverAuth
+subjectAltName=@altNames
+[altNames]
+DNS.1 = what you need here
+DNS.2 = if headed to deploy on Kubernetes use pod/service/namespace here
+
+
+4. Make the CRT from your CSR
+openssl x509 -req -in namefortheca.csr -signkey nameofyourca.key -sha256 -days 365 -out willbethenameofca.crt -extfile openssl.ext -extensions root
+This uses the openssl.ext file. If you don't need, remove the -extfile and extensions args.
+
+Let's make some Server Certs:
+
+
+1. Make the Server Key
+  openssl genrsa -out server.key 2048
+
+2.  Make the Server CSR
+    openssl req -new -key server.key  -out server.csr
+
+  Common Name here does matter, to run local use `localhost` or if different use your server's name.
+
+3.  Make the Server CRT from the CSR
+  openssl x509 -req -in server.csr -CA willbethenameofca.crt -CAkey nameofyourca.key -CAcreateserial -sha256 -days 365 -out server.crt -extfile openssl.ext -extensions server
+
+Verify your new Certs:
+ To save you from issues down the road.
+
+openssl verify -CAfile willbethenameofca.crt server.crt
+server.crt: OK
